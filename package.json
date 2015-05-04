@@ -1,0 +1,27 @@
+{
+  "name": "EventSurfer",
+  "description": "Event Surfer",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "scripts": {
+    "test": "grunt qunit"
+  },
+  "author": {
+    "name": "Hack team",
+    "email": "email@domain.com",
+    "url": "https://apps.facebook.com/eventsurfer"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "grunt": "0.4.4",
+    "grunt-cli": "0.1.13",
+    "grunt-contrib-clean": "0.5.0",
+    "grunt-contrib-connect": "0.7.1",
+    "grunt-connect-proxy": "0.1.11",
+    "load-grunt-tasks": "0.4.0",
+    "grunt-contrib-livereload": "0.1.2"
+  }
+
+}

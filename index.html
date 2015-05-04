@@ -1,0 +1,313 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="stylesheet" href="css/bootstrap.min.css">
+        <style>
+            body {
+                padding-top: 50px;
+                padding-bottom: 20px;
+            }
+        </style>
+        <link rel="stylesheet" href="css/bootstrap-theme.min.css">
+        <link rel="stylesheet" href="css/main.css">
+
+        <!--[if lt IE 9]>
+            <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+            <script>window.html5 || document.write('<script src="js/vendor/html5shiv.js"><\/script>')</script>
+        <![endif]-->
+
+        <script src="js/vendor/knockout-3.3.0.js"></script>
+        <script src="js/vendor/underscore-1.8.3.js"></script>
+        <script src="js/fb_utils.js"></script>
+        <script src="js/domain.js"></script>
+
+        <style>
+            html, body, #map-canvas {
+                height: 300px;
+                margin: 0px;
+                padding: 0px
+            }
+        </style>
+        <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true"></script>
+
+        <script>
+
+var appId = '766777313347000';
+        window.fbAsyncInit = function () {
+            FB.init({
+                appId: appId,
+                status: true,
+                cookie: true,
+                xfbml: true,
+                frictionlessRequests: true,
+                oauth: true,
+                version: 'v2.0' // use version 2.0
+            });
+            FB.Canvas.setAutoGrow();
+            FB.getLoginStatus(function (response) {
+                console.log('statusChangeCallback');
+                console.log(response);
+                if (response.status === 'connected') {
+                    viewModel.onAuth(response);
+                } else if (response.status === 'not_authorized') {
+                    // The person is logged into Facebook, but not your app.
+                    console.log('Please log into this app.');
+                    //TODO remove hardcoded id
+                    window.location = encodeURI("https://www.facebook.com/v2.0/dialog/oauth?client_id=" + appId + "&redirect_uri=" + window.location + "&response_type=token&scope=email,publish_stream");
+                } else {
+                    console.log('Please log into Facebook.');
+                    //TODO remove hardcoded id
+                    window.location = encodeURI("https://www.facebook.com/v2.0/dialog/oauth?client_id=" + appId + "&redirect_uri=" + window.location + "&response_type=token&scope=email,publish_stream");
+                }
+                //   }
+            });
+            //FB.Event.subscribe('auth.statusChange', check_auth);
+            //  FB.login(checkLoginStatus, {scope:'email'});
+            FB.Event.subscribe('auth.authResponseChange', function (response) {
+                window.loginStatus = response.status;
+                console.log("auth.authResponseChange=" + response.status);
+                // document.cookie = "access_token=" + response.authResponse.accessToken;
+            });
+            if (!window.loginStatus) {
+                FB.getLoginStatus(function (response) {
+                    console.log("Login status");
+                    console.log(response);
+                    window.loginStatus = response.status;
+                    //access_token = response.authResponse.accessToken;
+                    //setTimeout(refer_fb, 500);
+                });
+            }
+        };
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) return;
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+
+var objectToLike = 'http://techcrunch.com/2013/02/06/facebook-launches-developers-live-video-channel-to-keep-its-developer-ecosystem-up-to-date/';
+
+function postLike() {
+    FB.api(
+            'https://graph.facebook.com/me/og.likes',
+            'post',
+            { object: objectToLike,
+                privacy: {'value': 'SELF'} },
+            function(response) {
+                if (!response) {
+                    alert('Error occurred.');
+                } else if (response.error) {
+                    document.getElementById('result').innerHTML =
+                            'Error: ' + response.error.message;
+                } else {
+                    document.getElementById('result').innerHTML =
+                            '<a href=\"https://www.facebook.com/me/activity/' +
+                            response.id + '\">' +
+                            'Story created.  ID is ' +
+                            response.id + '</a>';
+                }
+            }
+    );
+}
+        </script>
+
+<script>
+    //Google maps visualisation
+    function autoCenter(map, markers) {
+        var avg_lat = 0;
+        var avg_lng = 0;
+        for (var i = 0; i < markers.length; i++) {
+            avg_lat += markers[i].position.lat();
+            avg_lng += markers[i].position.lng();
+        }
+        avg_lat = avg_lat / markers.length;
+        avg_lng = avg_lng / markers.length;
+
+        map.setCenter(new google.maps.LatLng(avg_lat, avg_lng));
+    }
+
+    function initialize(data) {
+        var openInfoWindow;
+        var markers = [];
+
+        var mapOptions = {
+            zoom: 8,
+            center: new google.maps.LatLng(-25.363882, 131.044922)
+        };
+
+        var map = new google.maps.Map(document.getElementById('map-canvas'),
+                mapOptions);
+
+
+        data.forEach(function(item) {
+            if (item.venue && item.venue.longitude) {
+
+                var marker = new google.maps.Marker({
+                    position: new google.maps.LatLng(item.venue.latitude, item.venue.longitude),
+                    map: map,
+                    title: item.name
+                });
+
+                var infoWindow = new google.maps.InfoWindow({
+                    content: "<h1>" + item.name + "</h1><br>" + item.description + "<br><img src=" + item.pic + ">"
+                });
+
+                google.maps.event.addListener(marker, 'click', function() {
+                    //map.setZoom(8);
+                    //map.setCenter(marker.getPosition());
+                    if (!!openInfoWindow) {
+                        openInfoWindow.close();
+                    }
+
+                    infoWindow.open(map,marker);
+                    openInfoWindow = infoWindow;
+                });
+
+                markers.push(marker);
+            }
+        })
+
+        autoCenter(map, markers);
+    }
+
+</script>
+    </head>
+    <body>
+        <!--[if lt IE 8]>
+            <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">EventSurfer</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <form class="navbar-form" role="form">
+                <div class="form-group">
+                    <input type="text" placeholder="City" class="form-control" data-bind="value: citySearch"/>
+                </div>
+                <button type="submit" class="btn btn-success" data-bind="click: getSocialEvents">search</button>
+                <span style="color: #ffffff">Found:</span><span data-bind="text:events().length" style="color:#ffffff"></span>
+                <div class="pull-right">
+                    <img data-bind="attr:{src: currentUser.avatarUrl}" width="50"/>
+                    <span data-bind="text: currentUser.name()  + ' ' + currentUser.surname()" class="username"></span>
+
+                </div>
+            </form>
+
+
+
+        </div><!--/.navbar-collapse -->
+      </div>
+    </nav>
+
+    <!-- Main jumbotron for a primary marketing message or call to action -->
+    <!--<div class="jumbotron">-->
+      <!--<div class="container">-->
+          <br/>
+          <br/>
+          <br/>
+              <div id="map-canvas"></div>
+              <!--<div class="form-group">-->
+                  <!--<input type="text" placeholder="City" class="form-control" data-bind="value: citySearch"/>-->
+              <!--</div>-->
+             <!--<button type="submit" class="btn btn-success" data-bind="click: getSocialEvents">search</button>-->
+              <!--<button>Map</button>-->
+              <!--<div data-bind="visible: events">-->
+                 <!--<h3> <span>Found:</span><span data-bind="text:events().length"></span></h3>-->
+              <!--</div>-->
+      <!--</div>-->
+    <!--</div>-->
+    <div class="container">
+      <!-- Example row of columns -->
+
+
+        <div class="row" data-bind="visible: events">
+            <div data-bind="foreach: events">
+                <div class="col-sm-4 col-lg-4 col-md-4">
+                    <div class="thumbnail">
+                        <img width="200px" height="100px" data-bind="attr:{src: pic_big}">
+
+                        <div class="caption">
+                            <h4><span>Starts:</span><span class="pull-right" data-bind="text:start_time"></span></h4>
+                            <a data-bind="attr:{href:'http://facebook.com/'+eid},text:name"></a>
+
+                            <p data-bind="test:description"></p>
+                        </div>
+                        <div class="ratings">
+                            <p class="pull-right" data-bind="test:attending_count"></p>
+                            <h4><span>All members:</span><span data-bind="text:all_members_count"></span></h4>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <!--</div>-->
+            </div>
+
+
+
+            <div
+                    class="fb-login-button"
+                    data-show-faces="true"
+                    data-width="200"
+                    data-max-rows="1"
+                    data-scope="publish_actions">
+            </div>
+
+            <div>
+                This example creates a story on Facebook using the
+                <a href="https://developers.facebook.com/docs/reference/ogaction/og.likes">
+                    <code>og.likes</code></a> API.  That story will just say
+                that you like an
+                <a href="http://techcrunch.com/2013/02/06/facebook-launches-developers-live-video-channel-to-keep-its-developer-ecosystem-up-to-date/">
+                    article on TechCrunch</a>.  The story should only
+                be visible to you.
+            </div>
+
+            <div>
+                <input
+                        type="button"
+                        value="Create a story with an og.likes action"
+                        onclick="postLike();">
+            </div>
+
+            <div id="result"></div>
+
+
+
+      <footer>
+        <p>&copy; Company 2015</p>
+      </footer>
+    </div> <!-- /container -->        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.11.2.min.js"><\/script>')</script>
+
+        <script src="js/vendor/bootstrap.min.js"></script>
+
+        <script src="js/main.js"></script>
+
+        <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
+        <script>
+            (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
+            function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
+            e=o.createElement(i);r=o.getElementsByTagName(i)[0];
+            e.src='//www.google-analytics.com/analytics.js';
+            r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
+            ga('create','UA-XXXXX-X','auto');ga('send','pageview');
+        </script>
+
+    </body>
+</html>
